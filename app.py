@@ -124,6 +124,8 @@ app.add_middleware(
         "http://127.0.0.1:8001",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "http://127.0.0.1:8001",
+        "http://localhost:8001",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -298,6 +300,7 @@ async def predict_endpoint(
     label      = result["label"]
     confidence = result["confidence"]
     mode       = result["mode"]
+    meta_used  = result.get("metadata_used", {})
 
     info       = CLASS_INFO.get(label, {"full_name": label, "risk": "unknown"})
     full_name  = info["full_name"]
@@ -323,9 +326,9 @@ async def predict_endpoint(
         "risk_level":         risk_level,
         "mode":               mode,
         "metadata": {
-            "age":      age,
-            "sex":      sex or "unknown",
-            "location": location or "unknown",
+            "age":      meta_used.get("age", age if age is not None else 55.0),
+            "sex":      meta_used.get("sex", sex or "unknown"),
+            "location": meta_used.get("location", location or "unknown"),
         },
         "gradcam_b64":        gradcam_b64,
         "lime_b64":           lime_b64,
@@ -342,6 +345,7 @@ async def predict_endpoint(
         "confidence":     confidence,
         "risk_level":     risk_level,
         "mode":           mode,
+        "metadata_used":  meta_used,
         "gradcam":        gradcam_b64,
         "lime":           lime_b64,
         "original_image": original_b64,
