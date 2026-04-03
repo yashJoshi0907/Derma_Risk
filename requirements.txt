@@ -6,6 +6,7 @@ numpy
 opencv-python
 Pillow
 scikit-learn
+scikit-image
 lime
 joblib
 google-genai

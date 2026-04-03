@@ -1,103 +1,124 @@
 """
-utils/gradcam.py — Robust Grad-CAM visualization.
-Uses a single GradientTape approach on the full model instead of
-splitting into sub-models (which breaks on DenseNet skip connections).
+utils/gradcam.py — Grad-CAM for DenseNet121 (Keras 3 / nested Model)
+
+Keras 3: tensors like nested.get_layer(...).output are not connected to the
+outer model's inputs, so Model(model.inputs, [that, model.output]) fails.
+We compose: G1(model.input) -> [conv_maps, pooled], then apply top-level
+head layers on pooled so gradients flow to conv_maps.
 """
+
+from typing import Dict, Optional
 
 import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
 
+# Last spatial concat in Keras DenseNet121 before global pooling
+_DENSENET_CONV_TARGET = "conv5_block16_concat"
 
-def _find_last_conv_layer(model: Model):
-    """Walk the model (and any nested sub-models) to find the last Conv2D layer."""
-    last_conv = None
+_gradcam_graph_cache: Dict[int, Model] = {}
+
+
+def _find_densenet_wrapper(model: Model):
+    """Return the nested tf.keras.Model that contains DenseNet conv5 concat."""
     for layer in model.layers:
         if isinstance(layer, tf.keras.Model):
-            for sub_layer in layer.layers:
-                if isinstance(sub_layer, tf.keras.layers.Conv2D):
-                    last_conv = sub_layer
-        elif isinstance(layer, tf.keras.layers.Conv2D):
-            last_conv = layer
-    return last_conv
+            try:
+                layer.get_layer(_DENSENET_CONV_TARGET)
+                return layer
+            except ValueError:
+                continue
+    return None
 
 
-def _find_target_layer(model: Model):
-    """
-    Find the target conv layer AND the sub-model it lives in.
-    Returns (sub_model, layer_name) so we can build a proper gradient model.
-    """
-    for layer in model.layers:
-        if isinstance(layer, tf.keras.Model):
-            # DenseNet121 is a nested sub-model
-            for sub_layer in reversed(layer.layers):
-                if isinstance(sub_layer, tf.keras.layers.Conv2D):
-                    return layer, sub_layer.name
-    # Fallback: look in the top-level model
-    for layer in reversed(model.layers):
-        if isinstance(layer, tf.keras.layers.Conv2D):
-            return model, layer.name
-    return None, None
+def _build_grad_model_densenet(model: Model) -> Model:
+    dn = _find_densenet_wrapper(model)
+    if dn is None:
+        raise ValueError(
+            f"No nested DenseNet with layer {_DENSENET_CONV_TARGET!r} found for Grad-CAM"
+        )
+
+    inner = dn.get_layer(_DENSENET_CONV_TARGET)
+    G1 = Model(dn.input, [inner.output, dn.output])
+
+    dn_name = dn.name
+    dn_idx = None
+    for i, layer in enumerate(model.layers):
+        if layer.name == dn_name:
+            dn_idx = i
+            break
+    if dn_idx is None:
+        raise ValueError("DenseNet wrapper not found in model.layers by name")
+
+    inp = model.input
+    if isinstance(inp, list):
+        inp = model.inputs[0]
+
+    conv, pooled = G1(inp)
+    x = pooled
+    for layer in model.layers[dn_idx + 1 :]:
+        x = layer(x)
+
+    return Model(inp, [conv, x])
 
 
-def make_gradcam_heatmap(model: Model, img_array: np.ndarray) -> np.ndarray:
+def _get_grad_model(model: Model) -> Model:
+    key = id(model)
+    if key not in _gradcam_graph_cache:
+        _gradcam_graph_cache[key] = _build_grad_model_densenet(model)
+    return _gradcam_graph_cache[key]
+
+
+def make_gradcam_heatmap(
+    model: Model,
+    img_array: np.ndarray,
+    pred_class_index: Optional[int] = None,
+) -> np.ndarray:
     """
     Compute Grad-CAM heatmap using a single forward+backward pass.
 
     Parameters
     ----------
-    model     : Full Keras model (input → softmax)
+    model     : Full Keras model (input → softmax), DenseNet121-style head
     img_array : (1, 224, 224, 3) float32, preprocessed for the model
+    pred_class_index : If set, explain this class logit; else argmax of softmax
 
     Returns
     -------
     heatmap : (224, 224) float32 in [0, 1]
     """
-    sub_model, target_layer_name = _find_target_layer(model)
-    if sub_model is None:
-        raise ValueError("No Conv2D layer found in model")
-
-    # Build a model that outputs both the conv layer activations and predictions
-    grad_model = Model(
-        inputs=model.inputs,
-        outputs=[
-            sub_model.get_layer(target_layer_name).output,
-            model.output,
-        ],
-    )
+    grad_model = _get_grad_model(model)
 
     img_tensor = tf.cast(img_array, tf.float32)
 
     with tf.GradientTape() as tape:
         conv_outputs, predictions = grad_model(img_tensor, training=False)
-        top_class = tf.argmax(predictions[0])
-        top_score = predictions[:, top_class]
+        n_cls = int(predictions.shape[-1])
+        if pred_class_index is not None:
+            ci = max(0, min(int(pred_class_index), n_cls - 1))
+            top_score = predictions[:, ci]
+        else:
+            top_class = tf.argmax(predictions[0])
+            top_score = predictions[:, top_class]
 
-    # Gradient of the top class score w.r.t. the conv outputs
     grads = tape.gradient(top_score, conv_outputs)
 
     if grads is None:
         print("[GradCAM] WARNING: Gradients are None. Returning blank heatmap.")
         return np.zeros((224, 224), dtype=np.float32)
 
-    # Global average pooling of gradients
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
 
-    # Weight the conv output channels by pooled gradients
     conv_out = conv_outputs[0].numpy()
     pooled = pooled_grads.numpy()
 
     for i in range(len(pooled)):
         conv_out[:, :, i] *= pooled[i]
 
-    # Average across channels → heatmap
     heatmap = np.mean(conv_out, axis=-1)
-
-    # ReLU
     heatmap = np.maximum(heatmap, 0)
 
-    # Percentile-based clipping for better contrast
     if heatmap.max() > 0:
         p2 = np.percentile(heatmap, 2)
         p98 = np.percentile(heatmap, 98)
@@ -108,13 +129,9 @@ def make_gradcam_heatmap(model: Model, img_array: np.ndarray) -> np.ndarray:
         else:
             heatmap = heatmap / (heatmap.max() + 1e-8)
 
-    # Upsample to 224×224 with cubic interpolation
     heatmap = cv2.resize(heatmap, (224, 224), interpolation=cv2.INTER_CUBIC)
-
-    # Gaussian blur for smoothness
     heatmap = cv2.GaussianBlur(heatmap, (11, 11), 0)
 
-    # Final normalization
     if heatmap.max() > 0:
         heatmap = heatmap / heatmap.max()
 
@@ -143,7 +160,6 @@ def overlay_gradcam(
     colored_heatmap = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_TURBO)
     colored_heatmap_rgb = cv2.cvtColor(colored_heatmap, cv2.COLOR_BGR2RGB)
 
-    # Blend: heatmap on top
     blended = cv2.addWeighted(colored_heatmap_rgb, alpha, img_rgb_224, 1 - alpha, 0)
     return blended  # RGB uint8
 
@@ -168,7 +184,6 @@ def make_comparison_image(
     thickness = 1
 
     def put_label(img, text, x, y):
-        # Dark outline for readability
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
                 cv2.putText(img, text, (x + dx, y + dy), font, scale,

@@ -6,6 +6,7 @@ Never trains or downloads weights — only loads from disk.
 import os
 import pickle
 
+import joblib
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import (
@@ -33,6 +34,26 @@ LOC_ENCODER_PATH = os.path.join(MODELS_DIR, "loc_encoder.pkl")
 CLASS_NAMES_PATH = os.path.join(MODELS_DIR, "class_names.pkl")
 
 DEFAULT_CLASS_NAMES = ["nv", "mel", "bcc", "akiec", "bkl", "df", "vasc"]
+
+
+def _load_sklearn_artifact(path: str):
+    """
+    Load sklearn-style objects saved as pickle or joblib.
+    Training code often uses joblib.dump(..., 'file.pkl'); pickle.load then fails
+    with errors like 'invalid load key' (e.g. first byte 0x09).
+    """
+    try:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    except Exception as pickle_err:
+        try:
+            return joblib.load(path)
+        except Exception as joblib_err:
+            raise RuntimeError(
+                f"Could not load {path!r} as pickle ({pickle_err}) or joblib ({joblib_err}). "
+                "Use a real .pkl/.joblib from sklearn (not CSV/Excel/text), and match sklearn version if needed."
+            ) from joblib_err
+
 
 # ---------------------------------------------------------------------------
 # Build DenseNet121 architecture
@@ -98,16 +119,30 @@ def _safe_label_encode(encoder, value: str) -> int:
 # ---------------------------------------------------------------------------
 # Load all models at module import time
 # ---------------------------------------------------------------------------
-print("[ModelLoader] Loading CNN model …")
-model: Model = _load_cnn_model()
+print("[ModelLoader] Loading CNN backbone (hybrid feature extractor; unchanged order: keras → h5 → weights) …")
+backbone_model: Model = _load_cnn_model()
+
+# CNN-only pipeline: always prefer densenet121_skin_classifier.h5 for softmax when present.
+# If there is no separate keras/h5, backbone already is DenseNet + those weights — reuse it.
+if os.path.exists(MODEL_WEIGHTS) and (
+    os.path.exists(MODEL_KERAS) or os.path.exists(MODEL_H5)
+):
+    print(f"[ModelLoader] CNN-only softmax: DenseNet + {MODEL_WEIGHTS} (prioritized over saved keras/h5)")
+    cnn_only_model = _build_densenet_model()
+    cnn_only_model.load_weights(MODEL_WEIGHTS)
+else:
+    cnn_only_model = backbone_model
 
 # Warm up
-print("[ModelLoader] Warming up CNN …")
-_ = model.predict(tf.zeros((1, 224, 224, 3)), verbose=0)
+print("[ModelLoader] Warming up backbone CNN …")
+_ = backbone_model.predict(tf.zeros((1, 224, 224, 3)), verbose=0)
+if cnn_only_model is not backbone_model:
+    print("[ModelLoader] Warming up CNN-only DenseNet …")
+    _ = cnn_only_model.predict(tf.zeros((1, 224, 224, 3)), verbose=0)
 print("[ModelLoader] CNN ready.")
 
 print("[ModelLoader] Building feature extractor …")
-feature_extractor: Model = _build_feature_extractor(model)
+feature_extractor: Model = _build_feature_extractor(backbone_model)
 
 # ---------------------------------------------------------------------------
 # Hybrid pipeline
@@ -122,18 +157,13 @@ CLASS_NAMES = DEFAULT_CLASS_NAMES
 _pkl_files = [HYBRID_MODEL_PATH, META_SCALER_PATH, SEX_ENCODER_PATH, LOC_ENCODER_PATH]
 if all(os.path.exists(p) for p in _pkl_files):
     try:
-        with open(HYBRID_MODEL_PATH, "rb") as f:
-            clf = pickle.load(f)
-        with open(META_SCALER_PATH, "rb") as f:
-            meta_scaler = pickle.load(f)
-        with open(SEX_ENCODER_PATH, "rb") as f:
-            sex_encoder = pickle.load(f)
-        with open(LOC_ENCODER_PATH, "rb") as f:
-            loc_encoder = pickle.load(f)
+        clf = _load_sklearn_artifact(HYBRID_MODEL_PATH)
+        meta_scaler = _load_sklearn_artifact(META_SCALER_PATH)
+        sex_encoder = _load_sklearn_artifact(SEX_ENCODER_PATH)
+        loc_encoder = _load_sklearn_artifact(LOC_ENCODER_PATH)
 
         if os.path.exists(CLASS_NAMES_PATH):
-            with open(CLASS_NAMES_PATH, "rb") as f:
-                CLASS_NAMES = pickle.load(f)
+            CLASS_NAMES = _load_sklearn_artifact(CLASS_NAMES_PATH)
 
         HYBRID_READY = True
         print("[ModelLoader] Hybrid pipeline loaded successfully.")
@@ -143,6 +173,9 @@ if all(os.path.exists(p) for p in _pkl_files):
 else:
     missing = [p for p in _pkl_files if not os.path.exists(p)]
     print(f"[ModelLoader] Hybrid pkl files missing: {missing}. Using CNN-only mode.")
+
+# `model`: legacy alias. predict.py uses `cnn_only_model` for Grad-CAM/LIME (DenseNet + weights path).
+model: Model = cnn_only_model
 
 
 # ---------------------------------------------------------------------------
@@ -155,11 +188,17 @@ def predict_hybrid_batch(
     location: str = "unknown",
 ):
     """
+    Hybrid path: CNN feature_extractor(image) → encode sex/location →
+    meta_scaler([age, sex_i, loc_i]) → concat → hybrid clf.predict_proba.
+
+    CNN-only path: softmax from `cnn_only_model` — DenseNet + densenet121_skin_classifier.h5
+    whenever that weights file exists alongside a keras/h5 backbone; otherwise `backbone_model`.
+
     Returns (label: str, confidence: float, class_idx: int)
     img_array shape: (1, 224, 224, 3), float32, already normalized
     """
     if not HYBRID_READY:
-        preds = model.predict(img_array, verbose=0)
+        preds = cnn_only_model.predict(img_array, verbose=0)
         idx = int(np.argmax(preds[0]))
         conf = float(preds[0][idx])
         label = CLASS_NAMES[idx] if idx < len(CLASS_NAMES) else str(idx)
