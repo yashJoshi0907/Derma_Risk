@@ -118,7 +118,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",   # Vite dev server
         "http://127.0.0.1:5173",
-        "http://localhost:8000",   # same-origin (production build served by FastAPI)
+        "http://localhost:5174",  
+        "http://127.0.0.1:5174",
+        "http://localhost:8001",   # same-origin (production build served by FastAPI)
+        "http://127.0.0.1:8001",
+        "http://localhost:8000",
         "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
