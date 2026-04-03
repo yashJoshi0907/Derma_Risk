@@ -31,7 +31,7 @@ export function Login() {
     } catch (err) {
       setError(
         err.response?.data?.detail ||
-          (isLogin ? 'Failed to authenticate. Check credentials.' : 'Registration failed.')
+        (isLogin ? 'Failed to authenticate. Check credentials.' : 'Registration failed.')
       );
     } finally {
       setIsLoading(false);
@@ -158,8 +158,8 @@ export function Login() {
               {isLoading
                 ? 'Processing...'
                 : isLogin
-                ? 'Sign In Securely'
-                : 'Complete Registration'}
+                  ? 'Sign In Securely'
+                  : 'Complete Registration'}
             </Button>
           </form>
 

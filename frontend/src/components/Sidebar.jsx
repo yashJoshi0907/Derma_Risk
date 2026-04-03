@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { LayoutDashboard, PlusCircle, History } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -12,12 +12,12 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-trustBlue-900 min-h-screen hidden md:flex flex-col text-white">
       <div className="h-16 flex items-center px-6 border-b border-trustBlue-800">
-        <div className="font-bold text-xl tracking-wide flex items-center gap-2">
+        <Link to="/" className="font-bold text-xl tracking-wide flex items-center gap-2 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 rounded-md bg-white flex items-center justify-center text-trustBlue-900 font-extrabold">
             D
           </div>
           DermaRisk
-        </div>
+        </Link>
       </div>
       <nav className="flex-1 py-6 px-4 space-y-2">
         {links.map((link) => (
