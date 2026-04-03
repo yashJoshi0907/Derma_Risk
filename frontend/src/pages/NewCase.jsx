@@ -5,7 +5,8 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
-import { UploadCloud, CheckCircle2, ChevronRight, Activity, Microscope, Image as ImageIcon, Sparkles, LayoutPanelLeft } from 'lucide-react';
+import { ImageExplainabilityPanel } from '../components/ImageExplainabilityPanel';
+import { UploadCloud, CheckCircle2, ChevronRight, Activity, Microscope, Sparkles } from 'lucide-react';
 
 const STEPS = ['Upload Image', 'Patient Context', 'Analysis', 'Results'];
 
@@ -19,9 +20,7 @@ export function NewCase() {
   const [metadata, setMetadata] = useState({ age: '', sex: '', location: '' });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [overlayOpacity, setOverlayOpacity] = useState(50);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [isSideBySide, setIsSideBySide] = useState(false);
+
 
   const handleFileDrop = (e) => {
     e.preventDefault();
@@ -248,109 +247,16 @@ export function NewCase() {
                 </div>
               </div>
 
-              {/* Explainable AI UI */}
-              <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 text-trustBlue-900 font-semibold">
-                    <Sparkles className="w-5 h-5 text-trustBlue-600" />
-                    Explainable AI (Grad-CAM)
-                  </div>
-                  
-                  <div className="flex items-center gap-4 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm text-sm">
-                    <button 
-                      onClick={() => setIsSideBySide(!isSideBySide)}
-                      className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${isSideBySide ? 'bg-trustBlue-100 text-trustBlue-900' : 'text-slate-500 hover:text-slate-800'}`}
-                    >
-                      <LayoutPanelLeft className="w-4 h-4" /> Mode
-                    </button>
-                    <div className="w-px h-5 bg-slate-200"></div>
-                    <button 
-                      onClick={() => setShowOverlay(!showOverlay)}
-                      className={`font-medium ${showOverlay ? 'text-trustBlue-700' : 'text-slate-400'}`}
-                    >
-                      {showOverlay ? 'Hide Overlay' : 'Show Overlay'}
-                    </button>
-                  </div>
-                </div>
 
-                <div className="p-6">
-                  {isSideBySide ? (
-                    // Side-by-Side View
-                    <div className="grid md:grid-cols-2 gap-8">
-                      <div>
-                        <h4 className="flex items-center gap-2 mb-3 text-sm font-semibold text-slate-600 uppercase tracking-widest"><ImageIcon className="w-4 h-4" /> Original Lesion</h4>
-                        <div className="rounded-xl overflow-hidden bg-black aspect-square max-w-sm mx-auto shadow-sm">
-                          <img src={`data:image/jpeg;base64,${result.original_image}`} className="w-full h-full object-contain" alt="Original" />
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="flex items-center gap-2 mb-3 text-sm font-semibold text-softRed-600 uppercase tracking-widest"><Sparkles className="w-4 h-4" /> AI Focus Area</h4>
-                        <div className="rounded-xl overflow-hidden bg-black aspect-square max-w-sm mx-auto shadow-sm border-2 border-softRed-100">
-                          <img src={`data:image/jpeg;base64,${result.gradcam}`} className="w-full h-full object-contain" alt="Grad-CAM" />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // Overlay View
-                    <div className="grid lg:grid-cols-3 gap-8">
-                      <div className="lg:col-span-2 relative aspect-video sm:aspect-square md:aspect-[4/3] max-h-[500px] mx-auto bg-black rounded-xl overflow-hidden shadow-inner border border-slate-100 group">
-                        <img 
-                          src={`data:image/jpeg;base64,${result.original_image}`} 
-                          className="absolute inset-0 w-full h-full object-contain" 
-                          alt="Original" 
-                        />
-                        {showOverlay && (
-                          <img 
-                            src={`data:image/jpeg;base64,${result.gradcam}`} 
-                            className="absolute inset-0 w-full h-full object-contain mix-blend-screen transition-opacity duration-200"
-                            style={{ opacity: overlayOpacity / 100 }}
-                            alt="Heatmap" 
-                          />
-                        )}
-                        {showOverlay && (
-                          <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider border border-white/20 shadow-lg">
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                            AI Focus Area Layer
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col justify-center space-y-6 lg:border-l lg:pl-8 border-slate-100">
-                        <div>
-                          <h4 className="font-semibold text-slate-900 mb-2">Overlay Controls</h4>
-                          <p className="text-sm text-slate-500 mb-6">
-                            Adjust the Grad-CAM heatmap opacity. Red areas indicate high spatial importance for the network decision.
-                          </p>
-                          
-                          <div className="space-y-4">
-                            <label className="text-sm font-medium flex justify-between text-trustBlue-900">
-                              Opacity Level <span>{overlayOpacity}%</span>
-                            </label>
-                            <input 
-                              type="range" 
-                              min="0" 
-                              max="100" 
-                              value={showOverlay ? overlayOpacity : 0}
-                              onChange={(e) => {
-                                setShowOverlay(true); 
-                                setOverlayOpacity(parseInt(e.target.value));
-                              }}
-                              className="w-full accent-trustBlue-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                            />
-                            <div className="grid grid-cols-3 gap-2 pt-2">
-                              <Button variant="outline" size="sm" onClick={() => {setShowOverlay(true); setOverlayOpacity(25);}} className={overlayOpacity === 25 && showOverlay ? 'border-trustBlue-500 text-trustBlue-700 bg-trustBlue-50' : ''}>25%</Button>
-                              <Button variant="outline" size="sm" onClick={() => {setShowOverlay(true); setOverlayOpacity(50);}} className={overlayOpacity === 50 && showOverlay ? 'border-trustBlue-500 text-trustBlue-700 bg-trustBlue-50' : ''}>50%</Button>
-                              <Button variant="outline" size="sm" onClick={() => {setShowOverlay(true); setOverlayOpacity(75);}} className={overlayOpacity === 75 && showOverlay ? 'border-trustBlue-500 text-trustBlue-700 bg-trustBlue-50' : ''}>75%</Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Explainable AI — LIME + Grad-CAM Panel */}
+              <ImageExplainabilityPanel
+                originalImage={result.original_image}
+                gradcamImage={result.gradcam}
+                limeImage={result.lime}
+              />
 
             </div>
+
           )}
 
         </CardContent>
