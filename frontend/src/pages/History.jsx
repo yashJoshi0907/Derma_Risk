@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Search, History as HistoryIcon, Activity } from 'lucide-react';
+import { Search, History as HistoryIcon, Activity, User } from 'lucide-react';
 
 export function History() {
+  const navigate = useNavigate();
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,10 +26,14 @@ export function History() {
     fetchHistory();
   }, []);
 
-  const filteredCases = cases.filter(c => 
-    (c.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.risk_level || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCases = cases.filter(c => {
+    const q = searchQuery.toLowerCase();
+    return (
+      (c.full_name || '').toLowerCase().includes(q) ||
+      (c.risk_level || '').toLowerCase().includes(q) ||
+      (c.patient_name || c.metadata?.patient_name || '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -47,7 +53,7 @@ export function History() {
           <div className="relative w-full max-w-xs">
             <Input 
               type="text" 
-              placeholder="Search by diagnosis or risk..." 
+              placeholder="Search by patient, diagnosis or risk..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -73,6 +79,12 @@ export function History() {
               <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
                   <tr>
+                    <th className="py-4 px-6">
+                      <span className="flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5" />
+                        Patient Name
+                      </span>
+                    </th>
                     <th className="py-4 px-6">Timestamp</th>
                     <th className="py-4 px-6">Case Summary (Prediction)</th>
                     <th className="py-4 px-6">Risk Protocol</th>
@@ -81,45 +93,73 @@ export function History() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredCases.map((c) => (
-                    <tr key={c.prediction_id} className="hover:bg-trustBlue-50/30 transition-colors">
-                      <td className="py-4 px-6 text-slate-600">
-                        {new Date(c.timestamp).toLocaleString()}
-                      </td>
-                      <td className="py-4 px-6 font-medium text-slate-900">
-                        {c.full_name || 'Unknown Diagnosis'}
-                        <div className="text-xs font-normal mt-0.5 text-slate-500">
-                          {c.metadata?.location || 'Unknown Location'} • {c.metadata?.age ? `${c.metadata.age}yo` : ''} {c.metadata?.sex || ''}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase
-                          ${c.risk_level === 'high' ? 'bg-softRed-100 text-softRed-700' : ''}
-                          ${c.risk_level === 'medium' ? 'bg-statusAmber-100 text-statusAmber-700' : ''}
-                          ${c.risk_level === 'low' ? 'bg-sageGreen-100 text-sageGreen-700' : ''}
-                          ${!['high', 'medium', 'low'].includes(c.risk_level) ? 'bg-slate-100 text-slate-600' : ''}
-                        `}>
-                          {c.risk_level} Risk
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full ${c.confidence >= 0.8 ? 'bg-trustBlue-600' : 'bg-trustBlue-400'}`} 
-                              style={{ width: `${c.confidence * 100}%` }}
-                            ></div>
+                  {filteredCases.map((c) => {
+                    const patientName = c.patient_name || c.metadata?.patient_name || '—';
+                    return (
+                      <tr key={c.prediction_id} className="hover:bg-trustBlue-50/30 transition-colors">
+                        {/* Patient Name — first column */}
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-trustBlue-100 text-trustBlue-700 flex items-center justify-center shrink-0 text-xs font-bold">
+                              {patientName !== '—' ? patientName.charAt(0).toUpperCase() : '?'}
+                            </div>
+                            <span className="font-medium text-slate-900">{patientName}</span>
                           </div>
-                          <span className="text-xs font-medium">
-                            {(c.confidence * 100).toFixed(1)}%
+                        </td>
+
+                        {/* Timestamp */}
+                        <td className="py-4 px-6 text-slate-600">
+                          {new Date(c.timestamp).toLocaleString()}
+                        </td>
+
+                        {/* Diagnosis */}
+                        <td className="py-4 px-6 font-medium text-slate-900">
+                          {c.full_name || 'Unknown Diagnosis'}
+                          <div className="text-xs font-normal mt-0.5 text-slate-500">
+                            {c.metadata?.location || 'Unknown Location'} • {c.metadata?.age ? `${c.metadata.age}yo` : ''} {c.metadata?.sex || ''}
+                          </div>
+                        </td>
+
+                        {/* Risk */}
+                        <td className="py-4 px-6">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase
+                            ${c.risk_level === 'high' ? 'bg-softRed-100 text-softRed-700' : ''}
+                            ${c.risk_level === 'medium' ? 'bg-statusAmber-100 text-statusAmber-700' : ''}
+                            ${c.risk_level === 'low' ? 'bg-sageGreen-100 text-sageGreen-700' : ''}
+                            ${!['high', 'medium', 'low'].includes(c.risk_level) ? 'bg-slate-100 text-slate-600' : ''}
+                          `}>
+                            {c.risk_level} Risk
                           </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <Button variant="outline" size="sm">View Report</Button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+
+                        {/* Confidence */}
+                        <td className="py-4 px-6 text-slate-600">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full ${c.confidence >= 0.8 ? 'bg-trustBlue-600' : 'bg-trustBlue-400'}`} 
+                                style={{ width: `${c.confidence * 100}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs font-medium">
+                              {(c.confidence * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-6">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate('/dashboard/report', { state: { reportData: c } })}
+                          >
+                            View Report
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
