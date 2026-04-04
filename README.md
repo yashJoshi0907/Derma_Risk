@@ -73,7 +73,7 @@ pip install -r requirements.txt
 # Start the FastAPI server using Uvicorn
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
-The backend should now be running at `http://localhost:8000`.
+The backend should now be running at `http://localhost:8001`.
 
 ### 2. Start the Frontend App
 
@@ -91,4 +91,4 @@ npm run dev
 ```
 The frontend should now be running at `http://localhost:5173` (or the port specified in your console). Open this URL in your browser to use the application.
 
-If ports are already in use, run the frontend on port 5174 and the backend on port 8001.
+If ports are already in use, run the frontend on port 5174.
