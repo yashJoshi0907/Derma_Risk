@@ -1,5 +1,130 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Eye, EyeOff, ZoomIn, X, Layers, LayoutGrid, Info, FlaskConical, ScanEye } from 'lucide-react';
+
+// ─── OpacitySlider ───────────────────────────────────────────────────────────
+// Defined at MODULE level so it is never remounted when the parent re-renders.
+// Drag state lives in a ref (zero re-render cost) so pointer-move updates
+// never reset isDragging.
+function OpacitySlider({ value, onChange, accentColor = '#3b82f6' }) {
+  const trackRef = useRef(null);
+  const dragging = useRef(false);          // ref → no re-render on change
+  const [isActive, setIsActive] = useState(false);  // drives visual feedback
+  const [isHovered, setIsHovered] = useState(false);
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  const valueFromPointer = useCallback((clientX) => {
+    const rect = trackRef.current.getBoundingClientRect();
+    const pct = clamp((clientX - rect.left) / rect.width, 0, 1);
+    return Math.round(pct * 100);
+  }, []);
+
+  // ── Pointer  (covers mouse + touch + stylus) ────────────────────
+  const handlePointerDown = useCallback((e) => {
+    e.preventDefault();
+    trackRef.current.setPointerCapture(e.pointerId);
+    dragging.current = true;
+    setIsActive(true);
+    onChange(valueFromPointer(e.clientX));
+  }, [onChange, valueFromPointer]);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!dragging.current) return;
+    onChange(valueFromPointer(e.clientX));
+  }, [onChange, valueFromPointer]);
+
+  const handlePointerUp = useCallback((e) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    setIsActive(false);
+    trackRef.current.releasePointerCapture(e.pointerId);
+    onChange(valueFromPointer(e.clientX));
+  }, [onChange, valueFromPointer]);
+
+  // ── Keyboard ────────────────────────────────────────────────────
+  const handleKeyDown = useCallback((e) => {
+    const step = e.shiftKey ? 10 : 1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); onChange(clamp(value + step, 0, 100)); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); onChange(clamp(value - step, 0, 100)); }
+    else if (e.key === 'Home') { e.preventDefault(); onChange(0); }
+    else if (e.key === 'End') { e.preventDefault(); onChange(100); }
+  }, [value, onChange]);
+
+  const pct = value;                                      // 0–100
+  const thumbSize = isActive ? 18 : isHovered ? 16 : 14;
+
+  return (
+    <div className="flex items-center gap-3 select-none">
+      {/* Track wrapper — receives all pointer events */}
+      <div
+        ref={trackRef}
+        role="slider"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={value}
+        tabIndex={0}
+        className="relative flex-1 flex items-center cursor-pointer focus:outline-none"
+        style={{ height: 24 }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onKeyDown={handleKeyDown}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Groove */}
+        <div
+          className="absolute inset-x-0 rounded-full"
+          style={{
+            height: 6,
+            background: '#e2e8f0',
+            top: '50%',
+            transform: 'translateY(-50%)',
+          }}
+        >
+          {/* Fill */}
+          <div
+            className="absolute inset-y-0 left-0 rounded-full"
+            style={{
+              width: `${pct}%`,
+              background: accentColor,
+              transition: isActive ? 'none' : 'width 0.15s ease-out',
+              boxShadow: `0 0 6px ${accentColor}55`,
+            }}
+          />
+        </div>
+
+        {/* Thumb */}
+        <div
+          className="absolute rounded-full border-2 border-white"
+          style={{
+            width: thumbSize,
+            height: thumbSize,
+            background: accentColor,
+            left: `calc(${pct}% - ${thumbSize / 2}px)`,
+            top: '50%',
+            transform: `translateY(-50%) scale(${isActive ? 1.25 : 1})`,
+            transition: isActive
+              ? 'width 0.08s ease-out, height 0.08s ease-out, transform 0.08s ease-out'
+              : 'left 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out, transform 0.15s ease-out',
+            boxShadow: isActive
+              ? `0 0 0 4px ${accentColor}35, 0 2px 8px rgba(0,0,0,0.3)`
+              : `0 1px 4px rgba(0,0,0,0.2)`,
+            cursor: isActive ? 'grabbing' : 'grab',
+            willChange: 'left, transform',
+            pointerEvents: 'none',   // track handles all events
+          }}
+        />
+      </div>
+
+      {/* Value readout */}
+      <span className="text-xs font-mono font-semibold text-slate-500 w-8 text-right tabular-nums">
+        {value}%
+      </span>
+    </div>
+  );
+}
 
 /**
  * ImageExplainabilityPanel
@@ -13,12 +138,12 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
   const [viewMode, setViewMode] = useState('panels');
 
   // Panel-level toggles (panels mode)
-  const [showGradcam, setShowGradcam]   = useState(true);
-  const [showLime, setShowLime]         = useState(true);
+  const [showGradcam, setShowGradcam] = useState(true);
+  const [showLime, setShowLime] = useState(true);
 
   // Opacity for each overlay (0-100)
   const [gradcamOpacity, setGradcamOpacity] = useState(60);
-  const [limeOpacity, setLimeOpacity]       = useState(70);
+  const [limeOpacity, setLimeOpacity] = useState(70);
 
   // Overlay mode: which overlay is active ('gradcam' | 'lime')
   const [activeOverlay, setActiveOverlay] = useState('gradcam');
@@ -55,18 +180,6 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
     );
   }
 
-  function OpacitySlider({ value, onChange, accentClass = 'accent-trustBlue-600' }) {
-    return (
-      <div className="flex items-center gap-3">
-        <input
-          type="range" min="0" max="100" value={value}
-          onChange={(e) => onChange(parseInt(e.target.value))}
-          className={`flex-1 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer ${accentClass}`}
-        />
-        <span className="text-xs font-mono font-semibold text-slate-500 w-8 text-right">{value}%</span>
-      </div>
-    );
-  }
 
   function InfoBox({ color, icon: Icon, title, description, legend }) {
     return (
@@ -96,11 +209,10 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
     return (
       <button
         onClick={onClick}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
-          active
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${active
             ? `${activeClass} border-transparent shadow-sm`
             : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-        }`}
+          }`}
       >
         {active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
         {children}
@@ -156,21 +268,19 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
           <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
             <button
               onClick={() => setViewMode('panels')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                viewMode === 'panels'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${viewMode === 'panels'
                   ? 'bg-trustBlue-900 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" /> 3-Panel View
             </button>
             <button
               onClick={() => setViewMode('overlay')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                viewMode === 'overlay'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${viewMode === 'overlay'
                   ? 'bg-trustBlue-900 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <Layers className="w-3.5 h-3.5" /> Overlay Mode
             </button>
@@ -205,7 +315,7 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
               </div>
 
               {/* 3-column grid */}
-              <div className={`grid gap-5 ${ showGradcam && showLime ? 'md:grid-cols-3' : showGradcam || showLime ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-xs' }`}>
+              <div className={`grid gap-5 ${showGradcam && showLime ? 'md:grid-cols-3' : showGradcam || showLime ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-xs'}`}>
 
                 {/* ── Column 1: Original ── */}
                 <div>
@@ -242,16 +352,6 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
                       borderColor="border-softRed-200"
                       onClick={() => openZoom(imgSrc(gradcamImage), 'AI Focus Area (Grad-CAM)')}
                     />
-                    <div className="mt-2 space-y-1.5">
-                      <label className="flex items-center justify-between text-xs font-medium text-slate-500">
-                        <span>Brightness</span>
-                      </label>
-                      <OpacitySlider
-                        value={gradcamOpacity}
-                        onChange={setGradcamOpacity}
-                        accentClass="accent-red-500"
-                      />
-                    </div>
                     <InfoBox
                       color={{ bg: 'bg-softRed-50', border: 'border-softRed-100', icon: 'text-softRed-500', title: 'text-softRed-700' }}
                       icon={ScanEye}
@@ -280,16 +380,6 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
                       borderColor="border-sageGreen-200"
                       onClick={() => openZoom(imgSrc(limeImage), 'Feature Importance (LIME)')}
                     />
-                    <div className="mt-2 space-y-1.5">
-                      <label className="flex items-center justify-between text-xs font-medium text-slate-500">
-                        <span>Brightness</span>
-                      </label>
-                      <OpacitySlider
-                        value={limeOpacity}
-                        onChange={setLimeOpacity}
-                        accentClass="accent-green-500"
-                      />
-                    </div>
                     <InfoBox
                       color={{ bg: 'bg-sageGreen-50', border: 'border-sageGreen-100', icon: 'text-sageGreen-600', title: 'text-sageGreen-700' }}
                       icon={FlaskConical}
@@ -371,11 +461,10 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
 
                     <button
                       onClick={() => setActiveOverlay('gradcam')}
-                      className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${
-                        activeOverlay === 'gradcam'
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${activeOverlay === 'gradcam'
                           ? 'border-softRed-400 bg-softRed-50 shadow-sm'
                           : 'border-slate-200 bg-white hover:border-softRed-200 hover:bg-softRed-50/30'
-                      }`}
+                        }`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${activeOverlay === 'gradcam' ? 'bg-softRed-500' : 'bg-slate-100'}`}>
                         <ScanEye className={`w-4 h-4 ${activeOverlay === 'gradcam' ? 'text-white' : 'text-slate-400'}`} />
@@ -391,11 +480,10 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
 
                     <button
                       onClick={() => setActiveOverlay('lime')}
-                      className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${
-                        activeOverlay === 'lime'
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${activeOverlay === 'lime'
                           ? 'border-sageGreen-400 bg-sageGreen-50 shadow-sm'
                           : 'border-slate-200 bg-white hover:border-sageGreen-200 hover:bg-sageGreen-50/30'
-                      }`}
+                        }`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${activeOverlay === 'lime' ? 'bg-sageGreen-500' : 'bg-slate-100'}`}>
                         <FlaskConical className={`w-4 h-4 ${activeOverlay === 'lime' ? 'text-white' : 'text-slate-400'}`} />
@@ -420,20 +508,19 @@ export function ImageExplainabilityPanel({ originalImage, gradcamImage, limeImag
                   <OpacitySlider
                     value={overlayOpacity}
                     onChange={setOverlayOpacity}
-                    accentClass={activeOverlay === 'gradcam' ? 'accent-red-500' : 'accent-green-500'}
+                    accentColor={activeOverlay === 'gradcam' ? '#ef4444' : '#22c55e'}
                   />
                   <div className="flex justify-between mt-3 gap-1.5">
                     {[25, 50, 75, 100].map((pct) => (
                       <button
                         key={pct}
                         onClick={() => setOverlayOpacity(pct)}
-                        className={`flex-1 py-1 rounded-lg text-xs font-semibold border transition-all duration-150 ${
-                          overlayOpacity === pct
+                        className={`flex-1 py-1 rounded-lg text-xs font-semibold border transition-all duration-150 ${overlayOpacity === pct
                             ? activeOverlay === 'gradcam'
                               ? 'bg-softRed-100 border-softRed-300 text-softRed-700'
                               : 'bg-sageGreen-100 border-sageGreen-300 text-sageGreen-700'
                             : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                        }`}
+                          }`}
                       >
                         {pct}%
                       </button>

@@ -16,7 +16,7 @@ export function NewCase() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
-  
+
   const [metadata, setMetadata] = useState({ patientName: '', age: '', sex: '', location: '' });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -51,7 +51,7 @@ export function NewCase() {
       const res = await api.post('/predict', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       setResult(res.data);
       setCurrentStep(3); // Results state
     } catch (err) {
@@ -98,9 +98,9 @@ export function NewCase() {
           {STEPS.map((step, idx) => (
             <div key={step} className="flex items-center gap-2">
               <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition-colors border-2
-                ${idx < currentStep ? 'bg-trustBlue-900 text-white border-trustBlue-900' : 
-                  idx === currentStep ? 'bg-trustBlue-50 text-trustBlue-900 border-trustBlue-900' : 
-                  'bg-white text-slate-400 border-slate-200'}
+                ${idx < currentStep ? 'bg-trustBlue-900 text-white border-trustBlue-900' :
+                  idx === currentStep ? 'bg-trustBlue-50 text-trustBlue-900 border-trustBlue-900' :
+                    'bg-white text-slate-400 border-slate-200'}
               `}>
                 {idx < currentStep ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
               </div>
@@ -115,10 +115,10 @@ export function NewCase() {
 
       <Card className="min-h-[500px]">
         <CardContent className="p-8 h-full flex flex-col justify-center">
-          
+
           {currentStep === 0 && (
             <div className="flex flex-col items-center text-center animate-in fade-in zoom-in duration-300">
-              <div 
+              <div
                 className="w-full max-w-2xl p-12 border-2 border-dashed border-trustBlue-200 rounded-2xl bg-trustBlue-50/30 hover:bg-trustBlue-50 cursor-pointer transition-colors"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleFileDrop}
@@ -131,11 +131,11 @@ export function NewCase() {
                 <p className="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
                   Drag and drop a high-resolution image of the lesion here, or click to browse. JPEG, PNG accepted.
                 </p>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  accept="image/jpeg, image/png" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/jpeg, image/png"
                   onChange={(e) => {
                     if (e.target.files[0]) handleFileSelection(e.target.files[0]);
                   }}
@@ -163,39 +163,39 @@ export function NewCase() {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-slate-700">Patient Name</label>
-                  <Input 
-                    type="text" 
-                    placeholder="Enter patient's full name" 
+                  <Input
+                    type="text"
+                    placeholder="Enter patient's full name"
                     value={metadata.patientName}
-                    onChange={(e) => setMetadata({...metadata, patientName: e.target.value})}
+                    onChange={(e) => setMetadata({ ...metadata, patientName: e.target.value })}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-slate-700">Patient Age</label>
-                    <Input 
-                      type="number" 
-                      placeholder="e.g. 45" 
+                    <Input
+                      type="number"
+                      placeholder="e.g. 45"
                       min="0" max="120"
                       value={metadata.age}
-                      onChange={(e) => setMetadata({...metadata, age: e.target.value})}
+                      onChange={(e) => setMetadata({ ...metadata, age: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-slate-700">Biological Sex</label>
-                    <Select 
-                      options={sexOptions} 
+                    <Select
+                      options={sexOptions}
                       value={metadata.sex}
-                      onChange={(e) => setMetadata({...metadata, sex: e.target.value})}
+                      onChange={(e) => setMetadata({ ...metadata, sex: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-slate-700">Anatomical Location</label>
-                  <Select 
-                    options={locationOptions} 
+                  <Select
+                    options={locationOptions}
                     value={metadata.location}
-                    onChange={(e) => setMetadata({...metadata, location: e.target.value})}
+                    onChange={(e) => setMetadata({ ...metadata, location: e.target.value })}
                   />
                 </div>
               </div>
@@ -256,7 +256,6 @@ export function NewCase() {
                   <Button variant="outline" onClick={() => navigate('/dashboard/history')}>View Case History</Button>
                 </div>
               </div>
-
 
               {/* Explainable AI — LIME + Grad-CAM Panel */}
               <ImageExplainabilityPanel
