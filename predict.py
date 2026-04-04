@@ -14,7 +14,7 @@ from tensorflow.keras.applications.densenet import preprocess_input
 from model_loader import MODEL_WEIGHTS, cnn_only_model, predict_hybrid_batch
 from utils import test_gradcam2 as _tg2
 from utils.preprocess import preprocess_image
-from utils.lime_explainer import explain_lime
+from utils.grad_lime import lime_overlay_rgb
 
 _tg2_conv = None
 _tg2_classifier = None
@@ -79,7 +79,7 @@ def predict(
 
     # ── 5. LIME ────────────────────────────────────────────────────────────
     try:
-        lime_img = explain_lime(cnn_only_model, raw_224)
+        lime_img = lime_overlay_rgb(cnn_only_model, raw_224)
     except Exception as e:
         print(f"[Predict] LIME failed: {e}. Using raw_224 as fallback.")
         lime_img = raw_224.copy()
