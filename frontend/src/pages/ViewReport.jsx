@@ -309,7 +309,6 @@ export function ViewReport() {
 
       {/* ── Section 3: Model Insights ─────────── */}
       <ModelInsightsCard
-        topPredictions={reportData.TOP_PREDICTIONS || []}
         warnings={reportData.WARNING_PRED || []}
         animationDelay="480ms"
       />

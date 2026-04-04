@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ShieldCheck, ArrowRight, Sparkles, CheckCircle, Brain, BarChart3, Users, Layers } from 'lucide-react';
+import { Activity, ShieldCheck, ArrowRight, Sparkles, CheckCircle, Brain, BarChart3, Users, Layers, Play } from 'lucide-react';
 
 // ─── Feature data ────────────────────────────────────────────────────────────
 const FEATURES = [
@@ -60,6 +60,30 @@ const STATS = [
 
 export function Home() {
   const [activeFeature, setActiveFeature] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const demoRef = useRef(null);
+  const videoRef = useRef(null);
+
+  const scrollToDemo = () => {
+    if (demoRef.current) {
+      const navbarHeight = 72;
+      const elementTop = demoRef.current.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({
+        top: elementTop - navbarHeight - 20,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  const handlePlayClick = () => {
+    if (videoRef.current) {
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleVideoPause = () => setIsPlaying(false);
+  const handleVideoPlay = () => setIsPlaying(true);
 
   return (
     <div className="min-h-screen bg-white">
@@ -73,11 +97,12 @@ export function Home() {
           DermaRisk
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/login">
-            <button className="hidden sm:inline-flex text-sm font-medium text-slate-600 hover:text-trustBlue-900 transition-colors px-4 py-2 rounded-lg hover:bg-slate-50">
-              View Demo
-            </button>
-          </Link>
+          <button
+            onClick={scrollToDemo}
+            className="hidden sm:inline-flex text-sm font-medium text-slate-600 hover:text-trustBlue-900 transition-colors px-4 py-2 rounded-lg hover:bg-slate-50"
+          >
+            View Demo
+          </button>
           <Link to="/login">
             <button className="inline-flex items-center gap-2 text-sm font-semibold bg-trustBlue-900 text-white px-5 py-2.5 rounded-xl hover:bg-trustBlue-800 transition-all duration-200 shadow-sm hover:shadow-md">
               Clinician Login <ArrowRight className="w-4 h-4" />
@@ -145,12 +170,13 @@ export function Home() {
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
               </Link>
-              <Link to="/login">
-                <button className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 hover:border-trustBlue-200 hover:text-trustBlue-900 hover:bg-trustBlue-50/50 font-semibold transition-all duration-200 text-base">
-                  <Sparkles className="w-4 h-4" />
-                  View Demo
-                </button>
-              </Link>
+              <button
+                onClick={scrollToDemo}
+                className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 hover:border-trustBlue-200 hover:text-trustBlue-900 hover:bg-trustBlue-50/50 font-semibold transition-all duration-200 text-base"
+              >
+                <Sparkles className="w-4 h-4" />
+                View Demo
+              </button>
             </div>
 
           </div>
@@ -307,6 +333,161 @@ export function Home() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── SECTION: Demo Video ─────────────────────────────── */}
+      <section
+        ref={demoRef}
+        id="demo"
+        className="w-full py-20 px-6 lg:px-12"
+        style={{
+          background: 'linear-gradient(180deg, #f8fafc 0%, #eef2f7 50%, #f8fafc 100%)',
+        }}
+      >
+        <div className="max-w-5xl mx-auto">
+
+          {/* Section heading */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-trustBlue-50 border border-trustBlue-100 text-trustBlue-700 text-sm font-semibold mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-trustBlue-500" />
+              Product Demo
+            </div>
+            <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+              See DermaRisk in Action
+            </h2>
+            <p className="mt-4 text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">
+              Watch how our AI-powered clinical decision support system analyzes skin lesions with explainable insights in real time.
+            </p>
+          </div>
+
+          {/* Video card */}
+          <div
+            className="relative rounded-[24px] overflow-hidden"
+            style={{
+              boxShadow: '0 32px 80px rgba(26,54,93,0.18), 0 8px 24px rgba(26,54,93,0.10)',
+              border: '1.5px solid rgba(26,54,93,0.08)',
+              transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 40px 100px rgba(26,54,93,0.28), 0 0 0 4px rgba(26,54,93,0.06), 0 8px 32px rgba(26,54,93,0.14)';
+              e.currentTarget.style.transform = 'translateY(-4px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 32px 80px rgba(26,54,93,0.18), 0 8px 24px rgba(26,54,93,0.10)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            {/* 16:9 aspect ratio wrapper */}
+            <div style={{ position: 'relative', paddingTop: '56.25%', background: '#020d1a' }}>
+              <video
+                ref={videoRef}
+                src="/demo.mov"
+                controls
+                playsInline
+                preload="metadata"
+                onPlay={handleVideoPlay}
+                onPause={handleVideoPause}
+                onEnded={handleVideoPause}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+
+              {/* Play overlay — hidden when playing */}
+              {!isPlaying && (
+                <button
+                  onClick={handlePlayClick}
+                  aria-label="Play demo video"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, rgba(2,13,26,0.55) 0%, rgba(10,36,64,0.45) 100%)',
+                    cursor: 'pointer',
+                    zIndex: 10,
+                    border: 'none',
+                    backdropFilter: 'blur(2px)',
+                    transition: 'background 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2,13,26,0.70) 0%, rgba(10,36,64,0.60) 100%)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2,13,26,0.55) 0%, rgba(10,36,64,0.45) 100%)';
+                  }}
+                >
+                  {/* Glow ring behind play button */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '50%',
+                      background: 'rgba(59,130,246,0.25)',
+                      filter: 'blur(20px)',
+                      animation: 'pulse 2s ease-in-out infinite',
+                    }}
+                  />
+                  {/* Play button circle */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '76px',
+                      height: '76px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 8px 32px rgba(26,54,93,0.5), 0 2px 8px rgba(0,0,0,0.4)',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    }}
+                  >
+                    <Play
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        color: '#ffffff',
+                        marginLeft: '4px',
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                      }}
+                      fill="currentColor"
+                    />
+                  </div>
+                  {/* Label below play button */}
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: '28px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      color: 'rgba(255,255,255,0.85)',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      letterSpacing: '0.05em',
+                      whiteSpace: 'nowrap',
+                      textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                    }}
+                  >
+                    Watch Demo
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Subtle caption below video */}
+          <p className="text-center text-slate-400 text-sm mt-6">
+            Full walkthrough · No sign-up required · 2 min
+          </p>
         </div>
       </section>
 
