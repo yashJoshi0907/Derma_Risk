@@ -5,6 +5,7 @@ Handles all database operations for SkinScan AI
 
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 from urllib.parse import quote_plus
 
@@ -47,6 +48,23 @@ db = client[MONGODB_DB_NAME]
 users_col = db["users"]
 predictions_col = db["predictions"]
 
+# One-time: after first successful drop, this file is created so predictions are not wiped again.
+_PREDICTIONS_RESET_MARKER = Path(__file__).resolve().parent / ".predictions_cleared_patient_name"
+
+
+async def _maybe_clear_predictions_collection_once() -> None:
+    """Drop all predictions once (test data) before enforcing patient_name on new rows."""
+    if _PREDICTIONS_RESET_MARKER.is_file():
+        return
+    try:
+        await predictions_col.drop()
+        _PREDICTIONS_RESET_MARKER.write_text(
+            "predictions collection cleared for patient_name field\n", encoding="utf-8"
+        )
+        print("[DB] predictions collection dropped (one-time; patient_name migration).")
+    except Exception as e:
+        print(f"[DB] WARNING: could not drop predictions collection: {e}")
+
 
 # ---------------------------------------------------------------------------
 # Index creation (called from FastAPI lifespan)
@@ -55,10 +73,12 @@ async def create_indexes():
     """Create DB indexes on startup. Logs a warning if MongoDB is unreachable."""
     try:
         await client.admin.command("ping")
+        await _maybe_clear_predictions_collection_once()
         await users_col.create_index("username", unique=True)
         await users_col.create_index("email", unique=True)
         await predictions_col.create_index("user_id")
         await predictions_col.create_index([("timestamp", -1)])
+        await predictions_col.create_index([("user_id", 1), ("patient_name", 1)])
         print("[DB] MongoDB connected and indexes created successfully.")
     except Exception as e:
         print(f"[DB] WARNING: Could not connect to MongoDB — {e}")
@@ -116,6 +136,8 @@ async def create_user(username: str, email: str, hashed_password: str) -> str:
 # Prediction operations
 # ---------------------------------------------------------------------------
 async def save_prediction(prediction_dict: dict) -> str:
+    if "patient_name" not in prediction_dict:
+        raise ValueError("prediction_dict must include non-null patient_name key (use empty string if unknown)")
     result = await predictions_col.insert_one(prediction_dict)
     return str(result.inserted_id)
 

@@ -291,9 +291,13 @@ async def predict_endpoint(
     age: Optional[float] = Form(None),
     sex: Optional[str] = Form(None),
     location: Optional[str] = Form(None),
+    patient_name: Optional[str] = Form(None),
     current_user: dict = Depends(get_current_user),
 ):
     image_bytes = await file.read()
+
+    # Stored only (search / records); not passed to the model. Always a string (never omitted in DB).
+    patient_name_stored = (patient_name or "").strip()
 
     result = run_predict(image_bytes, age=age, sex=sex, location=location)
 
@@ -320,6 +324,7 @@ async def predict_endpoint(
         "user_id":            current_user["_id"],
         "username":           current_user["username"],
         "timestamp":          now,
+        "patient_name":       patient_name_stored,
         "label":              label,
         "full_name":          full_name,
         "confidence":         confidence,
@@ -340,6 +345,7 @@ async def predict_endpoint(
     return {
         "status":         "success",
         "prediction_id":  str(inserted_id),
+        "patient_name":   patient_name_stored,
         "label":          label,
         "full_name":      full_name,
         "confidence":     confidence,
@@ -373,6 +379,7 @@ async def history(
         result_list.append({
             "prediction_id": p["_id"],
             "timestamp":     p["timestamp"].isoformat() if isinstance(p["timestamp"], datetime) else p["timestamp"],
+            "patient_name":  p.get("patient_name", ""),
             "label":         p.get("label", ""),
             "full_name":     p.get("full_name", ""),
             "confidence":    p.get("confidence", 0.0),
@@ -410,6 +417,7 @@ async def history_detail(
     return {
         "prediction_id":  prediction["_id"],
         "timestamp":      ts_str,
+        "patient_name":   prediction.get("patient_name", ""),
         "label":          prediction.get("label", ""),
         "full_name":      prediction.get("full_name", ""),
         "confidence":     prediction.get("confidence", 0.0),
