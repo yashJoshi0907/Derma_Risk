@@ -179,6 +179,19 @@ def overlay_gradcam(raw_224: np.ndarray, heatmap: np.ndarray, alpha: float = 0.6
     return cv2.cvtColor(np.uint8(superimposed), cv2.COLOR_BGR2RGB)
 
 
+def gradcam_result_image(
+    raw_224: np.ndarray,
+    heatmap: np.ndarray,
+    *,
+    alpha: float = 0.6,
+) -> np.ndarray:
+    """
+    Single RGB image for apps/APIs: JET heatmap overlaid on ``raw_224`` only
+    (no side-by-side or labels). Shape (224, 224, 3), uint8.
+    """
+    return overlay_gradcam(raw_224, heatmap, alpha=alpha)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  6. PLOT
 # ══════════════════════════════════════════════════════════════════════════════
@@ -265,6 +278,6 @@ if __name__ == "__main__":
         bar = "█" * int(prob * 30)
         print(f"   {name:6s} {prob:.4f}  {bar}")
 
-    # 5. Overlay + plot
-    overlay = overlay_gradcam(raw_224, heatmap)
+    # 5. Single overlay image + plot
+    overlay = gradcam_result_image(raw_224, heatmap)
     plot_results(raw_224, heatmap, overlay, pred_class, confidence, risk, predictions)

@@ -13,7 +13,6 @@ from tensorflow.keras.applications.densenet import preprocess_input
 
 from model_loader import MODEL_WEIGHTS, cnn_only_model, HYBRID_READY, predict_hybrid_batch
 from utils import test_gradcam2 as _tg2
-from utils.gradcam import make_comparison_image
 from utils.preprocess import preprocess_image
 from utils.lime_explainer import explain_lime
 
@@ -72,8 +71,7 @@ def predict(
         g2_arr, g2_raw = _bytes_to_gradcam2_tensors(image_bytes)
         conv_m, clf_m = _gradcam2_graphs()
         heatmap, _, _ = _tg2.make_gradcam(conv_m, clf_m, g2_arr)
-        gradcam_rgb = _tg2.overlay_gradcam(g2_raw, heatmap, alpha=0.6)
-        comparison = make_comparison_image(g2_raw, gradcam_rgb)
+        comparison = _tg2.gradcam_result_image(g2_raw, heatmap, alpha=0.6)
 
     except Exception as e:
         print(f"[Predict] Grad-CAM failed: {e}. Using raw_224 as fallback.")
