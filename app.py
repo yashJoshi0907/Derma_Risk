@@ -28,9 +28,10 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import BaseModel
 
-load_dotenv()
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Project .env must win over a stale GOOGLE_CLIENT_ID in the OS/shell (wrong audience errors).
+load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
+
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 FRONTEND_DIST = os.path.join(BASE_DIR, "frontend", "dist")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

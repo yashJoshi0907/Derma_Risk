@@ -33,9 +33,6 @@ Desktop.ini
 *.log
 err.txt
 
-# DB migration marker (local only)
-.predictions_cleared_patient_name
-
 # Distribution
 dist/
 build/
