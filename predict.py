@@ -11,7 +11,7 @@ import tensorflow as tf
 from PIL import Image
 from tensorflow.keras.applications.densenet import preprocess_input
 
-from model_loader import MODEL_WEIGHTS, cnn_only_model, HYBRID_READY, predict_hybrid_batch
+from model_loader import MODEL_WEIGHTS, cnn_only_model, predict_hybrid_batch
 from utils import test_gradcam2 as _tg2
 from utils.preprocess import preprocess_image
 from utils.lime_explainer import explain_lime
@@ -55,16 +55,16 @@ def predict(
     # ── 1. Preprocess ──────────────────────────────────────────────────────
     img_array, raw_224, _rgb_full = preprocess_image(image_bytes)
 
-    # ── 2. Defaults (must match what hybrid encoders + meta_scaler expect) ─
+    # ── 2. Defaults (stored with prediction; class is from CNN image-only) ─
     age_used = float(age) if age is not None else 55.0
     sex_used = str(sex).strip().lower() if sex is not None else "unknown"
     location_used = str(location).strip().lower() if location is not None else "unknown"
 
-    # ── 3. Hybrid: CNN features → sex/loc encoding → meta_scaler → hybrid clf
+    # ── 3. CNN-only: DenseNet softmax via cnn_only_model ─
     label, confidence, class_idx = predict_hybrid_batch(
         img_array, age_used, sex_used, location_used
     )
-    mode = "hybrid" if HYBRID_READY else "cnn_only"
+    mode = "cnn_only"
 
     # ── 4. Grad-CAM (utils/test_gradcam2) — 180px center crop + split model
     try:

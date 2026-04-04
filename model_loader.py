@@ -26,11 +26,6 @@ MODEL_KERAS = os.path.join(MODELS_DIR, "cnn_model.keras")
 MODEL_H5 = os.path.join(MODELS_DIR, "cnn_model.h5")
 MODEL_WEIGHTS = os.path.join(MODELS_DIR, "densenet121_skin_classifier.h5")
 
-FEATURE_EXTRACTOR_PATH = os.path.join(MODELS_DIR, "feature_extractor.keras")
-HYBRID_MODEL_PATH = os.path.join(MODELS_DIR, "hybrid_model.pkl")
-META_SCALER_PATH = os.path.join(MODELS_DIR, "meta_scaler.pkl")
-SEX_ENCODER_PATH = os.path.join(MODELS_DIR, "sex_encoder.pkl")
-LOC_ENCODER_PATH = os.path.join(MODELS_DIR, "loc_encoder.pkl")
 CLASS_NAMES_PATH = os.path.join(MODELS_DIR, "class_names.pkl")
 
 DEFAULT_CLASS_NAMES = ["nv", "mel", "bcc", "akiec", "bkl", "df", "vasc"]
@@ -87,39 +82,9 @@ def _load_cnn_model() -> Model:
 
 
 # ---------------------------------------------------------------------------
-# Build feature extractor (inputs → penultimate layer)
-# ---------------------------------------------------------------------------
-def _build_feature_extractor(cnn: Model) -> Model:
-    if os.path.exists(FEATURE_EXTRACTOR_PATH):
-        print(f"[ModelLoader] Loading feature_extractor from {FEATURE_EXTRACTOR_PATH}")
-        return tf.keras.models.load_model(FEATURE_EXTRACTOR_PATH)
-
-    # Second-to-last layer output (before softmax)
-    penultimate_layer = cnn.layers[-2]
-    return Model(inputs=cnn.inputs, outputs=penultimate_layer.output)
-
-
-# ---------------------------------------------------------------------------
-# Safe label encoding
-# ---------------------------------------------------------------------------
-def _safe_label_encode(encoder, value: str) -> int:
-    """Encode a categorical value safely; never raises an exception."""
-    try:
-        classes = [c.lower() for c in encoder.classes_]
-        val_lower = str(value).lower()
-        if val_lower in classes:
-            return classes.index(val_lower)
-        if "unknown" in classes:
-            return classes.index("unknown")
-        return 0
-    except Exception:
-        return 0
-
-
-# ---------------------------------------------------------------------------
 # Load all models at module import time
 # ---------------------------------------------------------------------------
-print("[ModelLoader] Loading CNN backbone (hybrid feature extractor; unchanged order: keras → h5 → weights) …")
+print("[ModelLoader] Loading CNN backbone (keras → h5 → densenet121_skin_classifier weights) …")
 backbone_model: Model = _load_cnn_model()
 
 # CNN-only pipeline: always prefer densenet121_skin_classifier.h5 for softmax when present.
@@ -141,38 +106,14 @@ if cnn_only_model is not backbone_model:
     _ = cnn_only_model.predict(tf.zeros((1, 224, 224, 3)), verbose=0)
 print("[ModelLoader] CNN ready.")
 
-print("[ModelLoader] Building feature extractor …")
-feature_extractor: Model = _build_feature_extractor(backbone_model)
-
-# ---------------------------------------------------------------------------
-# Hybrid pipeline
-# ---------------------------------------------------------------------------
-HYBRID_READY = False
-clf = None
-meta_scaler = None
-sex_encoder = None
-loc_encoder = None
+# Class labels for DenseNet softmax; optional class_names.pkl
 CLASS_NAMES = DEFAULT_CLASS_NAMES
-
-_pkl_files = [HYBRID_MODEL_PATH, META_SCALER_PATH, SEX_ENCODER_PATH, LOC_ENCODER_PATH]
-if all(os.path.exists(p) for p in _pkl_files):
+if os.path.exists(CLASS_NAMES_PATH):
     try:
-        clf = _load_sklearn_artifact(HYBRID_MODEL_PATH)
-        meta_scaler = _load_sklearn_artifact(META_SCALER_PATH)
-        sex_encoder = _load_sklearn_artifact(SEX_ENCODER_PATH)
-        loc_encoder = _load_sklearn_artifact(LOC_ENCODER_PATH)
-
-        if os.path.exists(CLASS_NAMES_PATH):
-            CLASS_NAMES = _load_sklearn_artifact(CLASS_NAMES_PATH)
-
-        HYBRID_READY = True
-        print("[ModelLoader] Hybrid pipeline loaded successfully.")
+        CLASS_NAMES = _load_sklearn_artifact(CLASS_NAMES_PATH)
+        print(f"[ModelLoader] Loaded class names from {CLASS_NAMES_PATH}")
     except Exception as e:
-        print(f"[ModelLoader] WARNING: Hybrid pipeline load failed: {e}. Falling back to CNN only.")
-        HYBRID_READY = False
-else:
-    missing = [p for p in _pkl_files if not os.path.exists(p)]
-    print(f"[ModelLoader] Hybrid pkl files missing: {missing}. Using CNN-only mode.")
+        print(f"[ModelLoader] WARNING: Could not load {CLASS_NAMES_PATH}: {e}. Using defaults.")
 
 # `model`: legacy alias. predict.py uses `cnn_only_model` for Grad-CAM/LIME (DenseNet + weights path).
 model: Model = cnn_only_model
@@ -188,39 +129,16 @@ def predict_hybrid_batch(
     location: str = "unknown",
 ):
     """
-    Hybrid path: CNN feature_extractor(image) → encode sex/location →
-    meta_scaler([age, sex_i, loc_i]) → concat → hybrid clf.predict_proba.
+    CNN-only: softmax from `cnn_only_model` (DenseNet121 + densenet121_skin_classifier.h5
+    when that file exists alongside keras/h5 backbone; otherwise the loaded backbone).
 
-    CNN-only path: softmax from `cnn_only_model` — DenseNet + densenet121_skin_classifier.h5
-    whenever that weights file exists alongside a keras/h5 backbone; otherwise `backbone_model`.
+    age/sex/location are ignored for the class (API compatibility only).
 
     Returns (label: str, confidence: float, class_idx: int)
     img_array shape: (1, 224, 224, 3), float32, already normalized
     """
-    if not HYBRID_READY:
-        preds = cnn_only_model.predict(img_array, verbose=0)
-        idx = int(np.argmax(preds[0]))
-        conf = float(preds[0][idx])
-        label = CLASS_NAMES[idx] if idx < len(CLASS_NAMES) else str(idx)
-        return label, conf, idx
-
-    # Feature extraction
-    feat = feature_extractor.predict(img_array, verbose=0)  # (1, N)
-
-    # Encode metadata
-    sex_i = _safe_label_encode(sex_encoder, sex)
-    loc_i = _safe_label_encode(loc_encoder, location)
-
-    # Scale metadata
-    meta_raw = np.array([[float(age), float(sex_i), float(loc_i)]])
-    meta_scaled = meta_scaler.transform(meta_raw)
-
-    # Concatenate features
-    X = np.concatenate([feat[0], meta_scaled[0]], axis=0).reshape(1, -1)
-
-    # Predict
-    proba = clf.predict_proba(X)[0]
-    idx = int(np.argmax(proba))
-    conf = float(proba[idx])
+    preds = cnn_only_model.predict(img_array, verbose=0)
+    idx = int(np.argmax(preds[0]))
+    conf = float(preds[0][idx])
     label = CLASS_NAMES[idx] if idx < len(CLASS_NAMES) else str(idx)
     return label, conf, idx
