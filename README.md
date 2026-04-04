@@ -41,7 +41,7 @@ VITE_GOOGLE_CLIENT_ID=331214924652-9912cuc6bqv013vlthqk0o8kqpq87oq7.apps.googleu
 
 Due to size limitations, the trained deep learning models are not included directly in the repository. 
 
-1. **Download the models here:** `https://drive.google.com/file/d/1oyphapWPexqvnbUTyDQwDbXfjOq2TY2s/view?usp=drive_link`
+1. **Download the models here:** `https://drive.google.com/drive/folders/1GRwFFCjwPhs3DwTCKaE9vHyqU2ko8yxc?usp=drive_link`
 2. **Install them:** Once downloaded, extract the model files and place them inside the `models/` directory in the root of the project. 
 
 It should look something like this:
