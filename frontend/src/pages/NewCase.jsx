@@ -267,7 +267,6 @@ export function NewCase() {
 
               {/* Model Insights — Top Predictions + Warnings */}
               <ModelInsightsCard
-                topPredictions={result.TOP_PREDICTIONS || []}
                 warnings={result.WARNING_PRED || []}
               />
 
