@@ -1,8 +1,66 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/Button';
-import { Activity, ShieldCheck, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
+import { Activity, ShieldCheck, ArrowRight, Sparkles, CheckCircle, Brain, BarChart3, Users, Layers } from 'lucide-react';
+
+// ─── Feature data ────────────────────────────────────────────────────────────
+const FEATURES = [
+  {
+    id: 1,
+    icon: Layers,
+    title: 'Multi-Class Lesion Detection',
+    description:
+      'Classifies skin lesions into multiple categories using trained deep learning models.',
+    image: '/features/feature-classification.png',
+    accent: 'from-trustBlue-500 to-trustBlue-700',
+    iconBg: 'bg-trustBlue-50',
+    iconColor: 'text-trustBlue-600',
+  },
+  {
+    id: 2,
+    icon: Brain,
+    title: 'Explainable AI Insights',
+    description:
+      'Provides Grad-CAM and LIME visual explanations highlighting the exact regions influencing predictions.',
+    image: '/features/feature-explainability.jpg',
+    accent: 'from-violet-500 to-purple-700',
+    iconBg: 'bg-violet-50',
+    iconColor: 'text-violet-600',
+  },
+  {
+    id: 3,
+    icon: BarChart3,
+    title: 'Risk Stratification Engine',
+    description:
+      'Translates model outputs into actionable risk levels to support clinical prioritization and follow-up planning.',
+    image: '/features/feature-risk.png',
+    accent: 'from-amber-500 to-orange-600',
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+  },
+  {
+    id: 4,
+    icon: Users,
+    title: 'Patient Case Management',
+    description:
+      'Organize, review, and track patient cases with image history, AI results, and diagnostic insights in one place.',
+    image: '/features/feature-patient.jpg',
+    accent: 'from-emerald-500 to-teal-600',
+    iconBg: 'bg-emerald-50',
+    iconColor: 'text-emerald-600',
+  },
+];
+
+// ─── Statistics data ──────────────────────────────────────────────────────────
+const STATS = [
+  { value: '670+', label: 'Cases Analyzed' },
+  { value: '95%', label: 'Model Accuracy' },
+  { value: '<52s', label: 'Prediction Time' },
+  { value: '7', label: 'Lesion Categories' },
+];
 
 export function Home() {
+  const [activeFeature, setActiveFeature] = useState(0);
+
   return (
     <div className="min-h-screen bg-white">
 
@@ -61,7 +119,7 @@ export function Home() {
 
             {/* Description */}
             <p className="text-lg text-slate-600 max-w-[480px] leading-relaxed">
-              Enhance your clinical diagnostic workflow with DermaRisk's explainable Two-Stage Intelligence Pipeline — accurate skin lesion classification with verifiable AI logic via Grad-CAM & LIME.
+              Enhance your clinical diagnostic workflow with DermaRisk's explainable Two-Stage Intelligence Pipeline — accurate skin lesion classification with verifiable AI logic via Grad-CAM &amp; LIME.
             </p>
 
             {/* Trust signals */}
@@ -223,6 +281,206 @@ export function Home() {
 
         </div>
       </section>
+
+      {/* ── SECTION 1: Statistics ───────────────────────────── */}
+      <section className="w-full bg-white border-y border-slate-100 py-14 px-6 lg:px-12">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
+            {STATS.map((stat, index) => (
+              <div
+                key={stat.label}
+                className={`flex flex-col items-center justify-center text-center py-6 px-4 ${
+                  index < STATS.length - 1
+                    ? 'border-r border-slate-100'
+                    : ''
+                }`}
+              >
+                <span
+                  className="text-4xl xl:text-5xl font-extrabold text-trustBlue-900 tracking-tight leading-none"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {stat.value}
+                </span>
+                <span className="mt-2.5 text-sm font-medium text-slate-400 uppercase tracking-widest">
+                  {stat.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION 2: Interactive Features ────────────────── */}
+      <section className="w-full bg-gradient-to-b from-slate-50 to-white py-24 px-6 lg:px-12">
+        <div className="max-w-[1300px] mx-auto">
+
+          {/* Section heading */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-trustBlue-50 border border-trustBlue-100 text-trustBlue-700 text-sm font-semibold mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-trustBlue-500" />
+              Platform Capabilities
+            </div>
+            <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+              Built for Clinical Excellence
+            </h2>
+            <p className="mt-4 text-slate-500 text-lg max-w-xl mx-auto leading-relaxed">
+              Every feature is designed to augment clinician decision-making with transparent, explainable AI.
+            </p>
+          </div>
+
+          {/* Main layout: left cards + right image */}
+          <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+
+            {/* ── LEFT: Feature cards ─────────────────────── */}
+            <div className="flex flex-col gap-4 lg:w-[42%]">
+              {FEATURES.map((feature, index) => {
+                const Icon = feature.icon;
+                const isActive = activeFeature === index;
+                return (
+                  <div
+                    key={feature.id}
+                    onMouseEnter={() => setActiveFeature(index)}
+                    className="group relative rounded-[20px] px-6 py-5 cursor-pointer select-none overflow-hidden"
+                    style={{
+                      background: isActive
+                        ? 'linear-gradient(135deg, #f0f5fa 0%, #e8f0f9 100%)'
+                        : '#ffffff',
+                      border: isActive
+                        ? '1.5px solid #c5d7eb'
+                        : '1.5px solid #f1f5f9',
+                      boxShadow: isActive
+                        ? '0 8px 32px rgba(26,54,93,0.10), 0 2px 8px rgba(26,54,93,0.06)'
+                        : '0 2px 8px rgba(0,0,0,0.04)',
+                      transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
+                      transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  >
+                    {/* Active left accent bar */}
+                    <div
+                      className={`absolute left-0 top-0 h-full w-1 rounded-l-[20px] bg-gradient-to-b ${feature.accent}`}
+                      style={{
+                        opacity: isActive ? 1 : 0,
+                        transition: 'opacity 0.3s ease',
+                      }}
+                    />
+
+                    <div className="flex items-start gap-4 pl-1">
+                      {/* Icon */}
+                      <div
+                        className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${feature.iconBg} ${feature.iconColor}`}
+                        style={{
+                          transition: 'transform 0.3s ease',
+                          transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                        }}
+                      >
+                        <Icon className="w-5 h-5" strokeWidth={2} />
+                      </div>
+
+                      {/* Text */}
+                      <div className="flex-1 min-w-0">
+                        <h3
+                          className="font-bold text-slate-900 leading-tight"
+                          style={{
+                            fontSize: isActive ? '15px' : '15.5px',
+                            transition: 'font-size 0.3s ease',
+                          }}
+                        >
+                          {feature.title}
+                        </h3>
+                        <p
+                          className="text-slate-500 text-sm leading-relaxed mt-1.5"
+                          style={{
+                            opacity: isActive ? 1 : 0.6,
+                            maxHeight: isActive ? '80px' : '0px',
+                            overflow: 'hidden',
+                            transition: 'opacity 0.35s ease, max-height 0.35s cubic-bezier(0.4,0,0.2,1)',
+                          }}
+                        >
+                          {feature.description}
+                        </p>
+                      </div>
+
+                      {/* Active indicator dot */}
+                      <div
+                        className="shrink-0 w-2 h-2 rounded-full bg-trustBlue-500 mt-1.5"
+                        style={{
+                          opacity: isActive ? 1 : 0,
+                          transition: 'opacity 0.3s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── RIGHT: Image panel ──────────────────────── */}
+            <div className="lg:flex-1 relative rounded-[28px] overflow-hidden bg-slate-100 shadow-2xl"
+              style={{ minHeight: '460px' }}>
+
+              {/* Subtle inner border */}
+              <div className="absolute inset-0 rounded-[28px] border border-slate-200 pointer-events-none z-10" />
+
+              {/* Image stack with fade transitions */}
+              {FEATURES.map((feature, index) => (
+                <div
+                  key={feature.id}
+                  className="absolute inset-0"
+                  style={{
+                    opacity: activeFeature === index ? 1 : 0,
+                    transform: activeFeature === index ? 'scale(1)' : 'scale(0.98)',
+                    transition: 'opacity 0.45s ease-in-out, transform 0.45s ease-in-out',
+                    zIndex: activeFeature === index ? 2 : 1,
+                  }}
+                >
+                  <img
+                    src={feature.image}
+                    alt={feature.title}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                  {/* Gradient overlay at bottom for label */}
+                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-900/60 to-transparent" />
+                  {/* Feature label chip */}
+                  <div className="absolute bottom-5 left-5 flex items-center gap-2.5">
+                    <div className={`w-2 h-2 rounded-full bg-gradient-to-br ${feature.accent}`} />
+                    <span className="text-white text-sm font-semibold tracking-wide drop-shadow">
+                      {feature.title}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Feature number indicator (top-right) */}
+              <div className="absolute top-5 right-5 z-20 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-md border border-slate-100">
+                <span className="text-xs font-bold text-slate-500">
+                  {activeFeature + 1} / {FEATURES.length}
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Navigation dots for mobile feature indicator */}
+          <div className="flex justify-center gap-2 mt-8 lg:hidden">
+            {FEATURES.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveFeature(index)}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: activeFeature === index ? '24px' : '8px',
+                  height: '8px',
+                  background: activeFeature === index ? '#1a365d' : '#cbd5e1',
+                }}
+                aria-label={`View feature ${index + 1}`}
+              />
+            ))}
+          </div>
+
+        </div>
+      </section>
+
     </div>
   );
 }
