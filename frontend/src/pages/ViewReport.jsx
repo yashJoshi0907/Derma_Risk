@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, User, MapPin, Activity, Clock, Brain, Microscope, AlertTriangle, CheckCircle, Info, Loader2 } from 'lucide-react';
 import { api } from '../utils/api';
 import { Button } from '../components/ui/Button';
+import { ModelInsightsCard } from '../components/ModelInsightsCard';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -306,10 +307,17 @@ export function ViewReport() {
         </div>
       </div>
 
-      {/* ── Section 3: AI Insight ──────────────── */}
+      {/* ── Section 3: Model Insights ─────────── */}
+      <ModelInsightsCard
+        topPredictions={reportData.TOP_PREDICTIONS || []}
+        warnings={reportData.WARNING_PRED || []}
+        animationDelay="480ms"
+      />
+
+      {/* ── Section 4: AI Insight ──────────────── */}
       <div
         className="rounded-2xl border border-trustBlue-100 bg-trustBlue-50/60 p-6 flex gap-4 animate-report-slide"
-        style={{ animationDelay: '480ms' }}
+        style={{ animationDelay: '560ms' }}
       >
         <div className="shrink-0 w-9 h-9 rounded-full bg-trustBlue-100 text-trustBlue-600 flex items-center justify-center">
           <Brain className="w-5 h-5" />

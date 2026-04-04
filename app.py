@@ -345,6 +345,8 @@ async def predict_endpoint(
         "gradcam_b64":        gradcam_b64,
         "lime_b64":           lime_b64,
         "original_image_b64": original_b64,
+        "top_predictions":    top_preds,
+        "warnings":           warnings,
     }
 
     inserted_id = await save_prediction(prediction_doc)
@@ -436,6 +438,8 @@ async def history_detail(
         "gradcam":        prediction.get("gradcam_b64", ""),
         "lime":           prediction.get("lime_b64", ""),
         "original_image": prediction.get("original_image_b64", ""),
+        "TOP_PREDICTIONS": prediction.get("top_predictions", []),
+        "WARNING_PRED":    prediction.get("warnings", []),
     }
 
 

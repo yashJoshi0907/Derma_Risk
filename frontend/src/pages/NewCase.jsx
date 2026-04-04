@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { ImageExplainabilityPanel } from '../components/ImageExplainabilityPanel';
+import { ModelInsightsCard } from '../components/ModelInsightsCard';
 import { UploadCloud, CheckCircle2, ChevronRight, Activity, Microscope, Sparkles } from 'lucide-react';
 
 const STEPS = ['Upload Image', 'Patient Context', 'Analysis', 'Results'];
@@ -262,6 +263,12 @@ export function NewCase() {
                 originalImage={result.original_image}
                 gradcamImage={result.gradcam}
                 limeImage={result.lime}
+              />
+
+              {/* Model Insights — Top Predictions + Warnings */}
+              <ModelInsightsCard
+                topPredictions={result.TOP_PREDICTIONS || []}
+                warnings={result.WARNING_PRED || []}
               />
 
             </div>
