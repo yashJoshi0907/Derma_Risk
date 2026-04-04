@@ -15,18 +15,22 @@ You will need to configure environment variables for both the backend and fronte
 ### Backend (`/.env`)
 Create a `.env` file in the root directory relative to `app.py`.
 ```env
-# Add your backend environment variables here. Examples:
-GEMINI_API_KEY=your_gemini_api_key_here
-GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
-# Database connection strings, secrets, etc.
+GEMINI_API_KEY=AIzaSyDUqyO6UP5Mf4rELvBgP77ld76f8mYW_2Q
+MONGODB_URI=mongodb+srv://yash:Joshi%40312@skincan.nkyg31z.mongodb.net/?appName=skincan
+MONGODB_DB_NAME=skinscan
+SECRET_KEY=admin@123
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+GOOGLE_CLIENT_ID=331214924652-9912cuc6bqv013vlthqk0o8kqpq87oq7.apps.googleusercontent.com
 ```
 
 ### Frontend (`/frontend/.env`)
 Create a `.env` file in the `frontend` folder.
 ```env
-# Add your frontend environment variables here. Examples:
-VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
-VITE_API_URL=http://localhost:8000
+# Leave empty so Vite proxy routes /auth, /predict, etc. to localhost:8000
+# Only set this for production builds: VITE_API_URL=https://your-backend.com
+VITE_API_URL=
+VITE_GOOGLE_CLIENT_ID=331214924652-9912cuc6bqv013vlthqk0o8kqpq87oq7.apps.googleusercontent.com
 ```
 
 *(Note for maintainer: Please manually replace the placeholder values and add any other required variables above)*
@@ -37,7 +41,7 @@ VITE_API_URL=http://localhost:8000
 
 Due to size limitations, the trained deep learning models are not included directly in the repository. 
 
-1. **Download the models here:** `[ADD YOUR GOOGLE DRIVE URL HERE]`
+1. **Download the models here:** `https://drive.google.com/file/d/1oyphapWPexqvnbUTyDQwDbXfjOq2TY2s/view?usp=drive_link`
 2. **Install them:** Once downloaded, extract the model files and place them inside the `models/` directory in the root of the project. 
 
 It should look something like this:
@@ -86,3 +90,5 @@ npm install
 npm run dev
 ```
 The frontend should now be running at `http://localhost:5173` (or the port specified in your console). Open this URL in your browser to use the application.
+
+If ports are already in use, run the frontend on port 5174 and the backend on port 8001.
