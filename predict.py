@@ -3,16 +3,44 @@ predict.py — Full prediction pipeline for SkinScan AI
 Wraps preprocessing, model inference, Grad-CAM, and LIME.
 """
 
-import numpy as np
+import io
 
-from model_loader import cnn_only_model, HYBRID_READY, predict_hybrid_batch
+import cv2
+import numpy as np
+import tensorflow as tf
+from PIL import Image
+from tensorflow.keras.applications.densenet import preprocess_input
+
+from model_loader import MODEL_WEIGHTS, cnn_only_model, HYBRID_READY, predict_hybrid_batch
+from utils import test_gradcam2 as _tg2
 from utils.preprocess import preprocess_image
-from utils.gradcam import (
-    make_gradcam_heatmap,
-    overlay_gradcam,
-    make_comparison_image,
-)
 from utils.lime_explainer import explain_lime
+
+_tg2_conv = None
+_tg2_classifier = None
+
+
+def _bytes_to_gradcam2_tensors(image_bytes: bytes):
+    """Same crop/resize as utils/test_gradcam2.preprocess_image, from upload bytes."""
+    pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    rgb = np.asarray(pil_img, dtype=np.uint8)
+    cr = _tg2.crop_center(rgb, size=180)
+    raw_224 = cv2.resize(cr, (224, 224))
+    img_arr = np.expand_dims(preprocess_input(raw_224.astype(np.float32)), axis=0)
+    return img_arr, raw_224
+
+
+def _gradcam2_graphs():
+    global _tg2_conv, _tg2_classifier
+    if _tg2_conv is None:
+        _real_clear = tf.keras.backend.clear_session
+        tf.keras.backend.clear_session = lambda: None
+        try:
+            full = _tg2.load_model(MODEL_WEIGHTS)
+        finally:
+            tf.keras.backend.clear_session = _real_clear
+        _tg2_conv, _tg2_classifier = _tg2.build_gradcam_models(full)
+    return _tg2_conv, _tg2_classifier
 
 
 def predict(
@@ -25,7 +53,7 @@ def predict(
     Run full prediction pipeline.
     """
     # ── 1. Preprocess ──────────────────────────────────────────────────────
-    img_array, raw_224, rgb_full = preprocess_image(image_bytes)
+    img_array, raw_224, _rgb_full = preprocess_image(image_bytes)
 
     # ── 2. Defaults (must match what hybrid encoders + meta_scaler expect) ─
     age_used = float(age) if age is not None else 55.0
@@ -38,17 +66,12 @@ def predict(
     )
     mode = "hybrid" if HYBRID_READY else "cnn_only"
 
-    # ── 4. Grad-CAM / LIME — always cnn_only_model (DenseNet + densenet121 weights when set);
-    #        same graph as preprocess.py / terminal tests. Hybrid label still from step 3.
+    # ── 4. Grad-CAM (utils/test_gradcam2) — 180px center crop + split model
     try:
-        heatmap = make_gradcam_heatmap(
-            cnn_only_model, img_array, pred_class_index=class_idx
-        )
-        
-        # overlay_gradcam takes RGB uint8 and returns RGB uint8
-        gradcam_rgb = overlay_gradcam(raw_224, heatmap, alpha=0.55)
-        
-        comparison = make_comparison_image(raw_224, gradcam_rgb)
+        g2_arr, g2_raw = _bytes_to_gradcam2_tensors(image_bytes)
+        conv_m, clf_m = _gradcam2_graphs()
+        heatmap, _, _ = _tg2.make_gradcam(conv_m, clf_m, g2_arr)
+        comparison = _tg2.gradcam_result_image(g2_raw, heatmap, alpha=0.6)
 
     except Exception as e:
         print(f"[Predict] Grad-CAM failed: {e}. Using raw_224 as fallback.")
