@@ -59,6 +59,7 @@ from database import (
     save_prediction,
 )
 from predict import predict as run_predict
+from utils.top_three_ci import predict_with_analysis
 
 # ── Class information ──────────────────────────────────────────────────────
 CLASS_INFO = {
@@ -297,6 +298,11 @@ async def predict_endpoint(
 ):
     image_bytes = await file.read()
 
+    # Apply top three and CI analysis
+    ci_analysis = predict_with_analysis(image_bytes)
+    warnings = ci_analysis.get("warnings", [])
+    top_preds = ci_analysis.get("top_predictions", [])
+
     # Stored only (search / records); not passed to the model. Always a string (never omitted in DB).
     patient_name_stored = (patient_name or "").strip()
 
@@ -357,6 +363,8 @@ async def predict_endpoint(
         "lime":           lime_b64,
         "original_image": original_b64,
         "timestamp":      now.isoformat(),
+        "WARNING_PRED":   warnings,
+        "TOP_PREDICTIONS": top_preds,
     }
 
 
