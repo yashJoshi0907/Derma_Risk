@@ -17,7 +17,7 @@ export function NewCase() {
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
   
-  const [metadata, setMetadata] = useState({ age: '', sex: '', location: '' });
+  const [metadata, setMetadata] = useState({ patientName: '', age: '', sex: '', location: '' });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -43,6 +43,7 @@ export function NewCase() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (metadata.patientName) formData.append('patient_name', metadata.patientName);
       if (metadata.age) formData.append('age', metadata.age);
       if (metadata.sex) formData.append('sex', metadata.sex.toLowerCase());
       if (metadata.location) formData.append('location', metadata.location.toLowerCase());
@@ -160,6 +161,15 @@ export function NewCase() {
               </div>
 
               <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700">Patient Name</label>
+                  <Input 
+                    type="text" 
+                    placeholder="Enter patient's full name" 
+                    value={metadata.patientName}
+                    onChange={(e) => setMetadata({...metadata, patientName: e.target.value})}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-slate-700">Patient Age</label>

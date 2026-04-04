@@ -8,6 +8,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { NewCase } from './pages/NewCase';
 import { History } from './pages/History';
+import { ViewReport } from './pages/ViewReport';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -28,6 +29,7 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="new" element={<NewCase />} />
               <Route path="history" element={<History />} />
+              <Route path="report" element={<ViewReport />} />
             </Route>
           </Routes>
         </BrowserRouter>
