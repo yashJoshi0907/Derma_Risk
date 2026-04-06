@@ -10,23 +10,23 @@ export default defineConfig({
       // Proxy all API calls to the FastAPI backend during development.
       // This also eliminates any CORS issues in the browser.
       '/auth': {
-        target: 'http://localhost:8001',
+        target: 'https://derma-risk.onrender.com',
         changeOrigin: true,
       },
       '/predict': {
-        target: 'http://localhost:8001',
+        target: 'https://derma-risk.onrender.com',
         changeOrigin: true,
       },
       '/history': {
-        target: 'http://localhost:8001',
+        target: 'https://derma-risk.onrender.com',
         changeOrigin: true,
       },
       '/chat': {
-        target: 'http://localhost:8001',
+        target: 'https://derma-risk.onrender.com',
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://localhost:8001',
+        target: 'https://derma-risk.onrender.com',
         changeOrigin: true,
       },
     },
