@@ -15,13 +15,13 @@ You will need to configure environment variables for both the backend and fronte
 ### Backend (`/.env`)
 Create a `.env` file in the root directory relative to `app.py`.
 ```env
-GEMINI_API_KEY=AIzaSyDUqyO6UP5Mf4rELvBgP77ld76f8mYW_2Q
-MONGODB_URI=mongodb+srv://yash:Joshi%40312@skincan.nkyg31z.mongodb.net/?appName=skincan
-MONGODB_DB_NAME=skinscan
-SECRET_KEY=admin@123
+GEMINI_API_KEY=your api key 
+MONGODB_URI= your mongo db link (srv)
+MONGODB_DB_NAME= your cluster name 
+SECRET_KEY=
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
-GOOGLE_CLIENT_ID=331214924652-9912cuc6bqv013vlthqk0o8kqpq87oq7.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=your api key
 ```
 
 ### Frontend (`/frontend/.env`)
@@ -29,8 +29,7 @@ Create a `.env` file in the `frontend` folder.
 ```env
 # Leave empty so Vite proxy routes /auth, /predict, etc. to localhost:8000
 # Only set this for production builds: VITE_API_URL=https://your-backend.com
-VITE_API_URL=
-VITE_GOOGLE_CLIENT_ID=331214924652-9912cuc6bqv013vlthqk0o8kqpq87oq7.apps.googleusercontent.com
+VITE_API_URL=your api key
 ```
 
 *(Note for maintainer: Please manually replace the placeholder values and add any other required variables above)*
