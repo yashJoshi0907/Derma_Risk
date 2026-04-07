@@ -3,8 +3,8 @@ import zipfile
 import shutil
 import gdown
 
-# This is the Google Drive Folder URL provided
-FOLDER_URL = "https://drive.google.com/drive/folders/1GRwFFCjwPhs3DwTCKaE9vHyqU2ko8yxc?usp=drive_link"
+# This is the Google Drive File URL provided
+FILE_URL = "https://drive.google.com/file/d/1Ire1ZguLURgQOSH6tEXp88kqfIhFLNlF/view?usp=sharing"
 MODELS_DIR = "models"
 
 def extract_and_flatten(zip_path, extract_to):
@@ -41,12 +41,12 @@ def main():
         os.makedirs(MODELS_DIR)
         print(f"Created directory: {MODELS_DIR}")
         
-    print(f"Downloading from Google Drive folder: {FOLDER_URL}")
+    print(f"Downloading from Google Drive file: {FILE_URL}")
     print("This may take a few minutes depending on the file sizes...")
     
-    # Download the contents of the Google Drive folder.
-    # We specify 'remaining_ok=True' just in case.
-    gdown.download_folder(FOLDER_URL, output=MODELS_DIR, quiet=False)
+    # Download the specific file. fuzzy=True helps parsing the /view?usp=sharing link
+    zip_output_path = os.path.join(MODELS_DIR, "downloaded_models.zip")
+    gdown.download(FILE_URL, output=zip_output_path, quiet=False, fuzzy=True)
     
     print("Download finished. Checking for zip files...")
     
