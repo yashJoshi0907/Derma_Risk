@@ -3,7 +3,7 @@ import axios from 'axios';
 // In development the Vite proxy (vite.config.js) forwards /auth, /predict, etc.
 // to http://localhost:8000, so baseURL can be '' (same-origin).
 // For production, set VITE_API_URL=https://your-backend.com in the .env file.
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://derma-risk.onrender.com' : '');
 
 // ── Main API instance (with automatic 401 → login redirect) ──
 export const api = axios.create({
