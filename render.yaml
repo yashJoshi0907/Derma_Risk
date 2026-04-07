@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: derma-risk-backend
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "uvicorn app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: FRONTEND_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: MONGO_URI
+        sync: false
