@@ -641,16 +641,7 @@ async def main_page():
     return _serve_react()
 
 
-# Catch-all for React Router client-side routes (e.g. /dashboard, /dashboard/new)
-@app.get("/{full_path:path}", include_in_schema=False)
-async def spa_fallback(full_path: str):
-    # Don't intercept API routes
-    if full_path.startswith(("auth/", "predict", "history", "chat", "health")):
-        raise HTTPException(status_code=404, detail="Not found")
-    return _serve_react()
-
-
-# Mount built React static assets AFTER all route definitions
+# Mount built React static assets BEFORE the catch-all SPA route
 # (assets/ folder with hashed JS/CSS only exists after `npm run build`)
 if os.path.isdir(FRONTEND_DIST):
     app.mount(
@@ -658,6 +649,14 @@ if os.path.isdir(FRONTEND_DIST):
         StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")),
         name="react-assets",
     )
+
+# Catch-all for React Router client-side routes (e.g. /dashboard, /dashboard/new)
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(full_path: str):
+    # Don't intercept API routes
+    if full_path.startswith(("auth/", "predict", "history", "chat", "health", "assets/")):
+        raise HTTPException(status_code=404, detail="Not found")
+    return _serve_react()
 
 
 if __name__ == "__main__":
